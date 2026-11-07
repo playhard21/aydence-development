@@ -45,7 +45,7 @@ export interface CourseInfo {
   icon: string;
 }
 
-export const COURSES: CourseInfo[] = [
+const COURSES: CourseInfo[] = [
   {
     slug: 'first-german-class',
     title: 'Your First German Class',

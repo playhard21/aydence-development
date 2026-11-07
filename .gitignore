@@ -39,3 +39,50 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# --- sensitive / local-only (added before moving to playhard21/aydence-development) ---
+# env files and secrets (never commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+id_rsa*
+*credentials*.json
+*service-account*.json
+*serviceaccount*.json
+google-*.json
+client_secret*.json
+
+# local databases (may hold customer bookings)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+prisma/*.db
+prisma/migrations/migration_lock.toml.bak
+
+# scratch/test scripts (contain personal emails and mail tests)
+/scratch/
+
+# logs, pm2, backups, dumps
+*.log
+logs/
+.pm2/
+*.sql
+*.sql.gz
+*.dump
+*.bak
+
+# AWS and tooling
+.aws/
+.claude/
+.vscode/
+.idea/
+
+# deploy artifacts
+*.tar.gz
+*.zip
