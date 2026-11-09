@@ -77,15 +77,14 @@ export async function createCalendarEvent(params: CalendarEventParams): Promise<
       },
     };
 
-    // Optionally invite the attendee
-    if (params.attendeeEmail) {
-      event.attendees = [{ email: params.attendeeEmail }];
-    }
+    // Mark our own events so availability checks can ignore them.
+    // (No attendees: service accounts cannot invite people without
+    // domain-wide delegation. The customer email goes in the description.)
+    event.extendedProperties = { private: { source: 'aydence-booking' } };
 
     const response = await calendar.events.insert({
       calendarId: process.env.GOOGLE_CALENDAR_ID!,
       requestBody: event,
-      sendUpdates: params.attendeeEmail ? 'all' : 'none',
     });
 
     return response.data.id || null;
@@ -93,4 +92,73 @@ export async function createCalendarEvent(params: CalendarEventParams): Promise<
     console.error('[Calendar] Failed to create event:', err);
     return null;
   }
+}
+
+export interface BusyInterval {
+  start: number; // epoch ms
+  end: number;   // epoch ms
+}
+
+/**
+ * Read events the owner put on the calendar (excluding bookings made by this
+ * site) and return them as busy intervals. Returns [] if not configured or on
+ * failure, so availability falls back to the database only.
+ */
+export async function getBusyIntervals(timeMin: Date, timeMax: Date): Promise<BusyInterval[]> {
+  if (!isCalendarConfigured()) return [];
+
+  try {
+    const { google } = await import('googleapis');
+    const credentials = JSON.parse(
+      Buffer.from(process.env.GOOGLE_CALENDAR_CREDENTIALS!, 'base64').toString('utf-8')
+    );
+    const auth = new google.auth.JWT(
+      credentials.client_email,
+      undefined,
+      credentials.private_key,
+      ['https://www.googleapis.com/auth/calendar']
+    );
+    const calendar = google.calendar({ version: 'v3', auth });
+
+    const busy: BusyInterval[] = [];
+    let pageToken: string | undefined;
+    do {
+      const res = await calendar.events.list({
+        calendarId: process.env.GOOGLE_CALENDAR_ID!,
+        timeMin: timeMin.toISOString(),
+        timeMax: timeMax.toISOString(),
+        singleEvents: true,
+        showDeleted: false,
+        maxResults: 250,
+        pageToken,
+      });
+      for (const ev of res.data.items || []) {
+        if (ev.status === 'cancelled' || ev.transparency === 'transparent') continue;
+        if (ev.extendedProperties?.private?.source === 'aydence-booking') continue;
+        // All-day events have `date`, timed events have `dateTime`
+        const start = ev.start?.dateTime || ev.start?.date;
+        const end = ev.end?.dateTime || ev.end?.date;
+        if (!start || !end) continue;
+        busy.push({ start: new Date(start).getTime(), end: new Date(end).getTime() });
+      }
+      pageToken = res.data.nextPageToken || undefined;
+    } while (pageToken);
+
+    return busy;
+  } catch (err) {
+    console.error('[Calendar] Failed to read busy times:', err);
+    return [];
+  }
+}
+
+/** True if the course slot (date + IST start/end) overlaps any busy interval. */
+export function slotOverlapsBusy(
+  busy: BusyInterval[],
+  date: string,
+  startTime: string,
+  endTime: string
+): boolean {
+  const s = new Date(`${date}T${startTime}:00+05:30`).getTime();
+  const e = new Date(`${date}T${endTime}:00+05:30`).getTime();
+  return busy.some((b) => b.start < e && b.end > s);
 }

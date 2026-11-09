@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../lib/db';
 import { parseDaysOfWeek, getAvailableDatesForMonth } from '../../lib/courses';
 import { getBulkAvailability } from '../../lib/availability';
+import { getBusyIntervals, slotOverlapsBusy } from '../../lib/calendar';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -48,7 +49,24 @@ export async function GET(req: NextRequest) {
   const availableDates = getAvailableDatesForMonth(year, month, course.startDate, daysOfWeek);
 
   // Get booking counts for all dates in one query
-  const availability = await getBulkAvailability(course.id, availableDates, course.capacity);
+  const dbAvailability = await getBulkAvailability(course.id, availableDates, course.capacity);
+
+  // Block dates where the owner's Google Calendar already has an event in the slot
+  let availability = dbAvailability;
+  if (availableDates.length > 0) {
+    const sorted = [...availableDates].sort();
+    const busy = await getBusyIntervals(
+      new Date(`${sorted[0]}T00:00:00+05:30`),
+      new Date(`${sorted[sorted.length - 1]}T23:59:59+05:30`)
+    );
+    if (busy.length > 0) {
+      availability = dbAvailability.map((a) =>
+        slotOverlapsBusy(busy, a.date, course.startTime, course.endTime)
+          ? { ...a, remaining: 0, isFull: true }
+          : a
+      );
+    }
+  }
 
   return NextResponse.json({
     course: {

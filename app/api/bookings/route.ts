@@ -10,7 +10,7 @@ import { isSlotAvailable, checkDuplicateBooking, getSlotAvailability } from '../
 import { generateBookingId } from '../../lib/booking-id';
 import { checkRateLimit } from '../../lib/rate-limit';
 import { sendCustomerConfirmation, sendAdminNotification } from '../../lib/email';
-import { createCalendarEvent } from '../../lib/calendar';
+import { createCalendarEvent, getBusyIntervals, slotOverlapsBusy } from '../../lib/calendar';
 import { parseDaysOfWeek, isValidCourseDay } from '../../lib/courses';
 import {
   logBookingCreated,
@@ -82,6 +82,18 @@ export async function POST(req: NextRequest) {
       const avail = await getSlotAvailability(course.id, date, course.capacity);
       return NextResponse.json(
         { message: 'This slot is no longer available. All spots are taken.', availability: avail },
+        { status: 409 }
+      );
+    }
+
+    // 6b. Reject if the owner's Google Calendar is busy during this slot
+    const busy = await getBusyIntervals(
+      new Date(`${date}T00:00:00+05:30`),
+      new Date(`${date}T23:59:59+05:30`)
+    );
+    if (slotOverlapsBusy(busy, date, course.startTime, course.endTime)) {
+      return NextResponse.json(
+        { message: 'This slot is no longer available.' },
         { status: 409 }
       );
     }
