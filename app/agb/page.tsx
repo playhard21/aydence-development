@@ -60,6 +60,7 @@ export default function AGBPage() {
                   Zahlungsabwicklung
                 </h2>
                 <p>
+                  {/* NOTE: Razorpay payments are on hold for now; review this clause before they go live. */}
                   Zahlungen erfolgen über Razorpay (UPI). Zugang wird erst nach vollständigem Zahlungseingang gewährt.
                 </p>
               </section>

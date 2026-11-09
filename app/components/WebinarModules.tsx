@@ -1,3 +1,4 @@
+/* NOTE: links to /payment are on hold; Razorpay payments are disabled for now. See app/payment/page.tsx. */
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';

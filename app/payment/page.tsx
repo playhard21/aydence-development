@@ -1,4 +1,18 @@
 'use client';
+/*
+ * ON HOLD: Razorpay payments are not needed for now (decision 2026-11-09).
+ *
+ * This page is NOT production-ready and must not be used to take real money:
+ *  - the Razorpay key below is a placeholder (rzp_test_YourKeyHere),
+ *  - there is no server-side order creation or signature verification,
+ *  - prices come from the client-side COURSES array, so they can be tampered with,
+ *  - the success screen claims a confirmation email was sent, but none is.
+ * Before re-enabling: create orders on the server, verify the payment signature,
+ * use the live key from an environment variable, and send the email.
+ * The "Enrol" links that point here are in components/ShortTermCourses.tsx and
+ * components/WebinarModules.tsx. Re-point or hide them as the business decides.
+ * Tracked in .claude/TODO.md (parent folder).
+ */
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -144,7 +158,8 @@ function PaymentInner() {
     setLoading(true);
 
     const options: RazorpayOptions = {
-      // ⚠️  Replace with your live key for production
+      // ON HOLD: placeholder key, payments are disabled for now (see top of file).
+      // When re-enabling, load the live key from an env var and create the order server-side.
       key: 'rzp_test_YourKeyHere',
       amount: course.priceINR * 100, // Razorpay needs paise
       currency: 'INR',
@@ -153,6 +168,7 @@ function PaymentInner() {
       image: '/logo-new.svg',
       prefill: { name, email, contact: phone },
       theme: { color: course.color },
+      // Client-side only: the payment is NOT verified on our server (see top of file).
       handler(response: RazorpayResponse) {
         setPaymentId(response.razorpay_payment_id);
         setSuccess(true);
