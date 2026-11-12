@@ -10,6 +10,7 @@ import { prisma } from '../../lib/db';
 import { parseDaysOfWeek, getAvailableDatesForMonth } from '../../lib/courses';
 import { getBulkAvailability } from '../../lib/availability';
 import { getBusyIntervals, slotOverlapsBusy } from '../../lib/calendar';
+import { TRIAL_SLUG, berlinEpoch, generateTrialSlots, hasEnoughNotice } from '../../lib/trial';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -48,6 +49,42 @@ export async function GET(req: NextRequest) {
   const daysOfWeek = parseDaysOfWeek(course.daysOfWeek);
   const availableDates = getAvailableDatesForMonth(year, month, course.startDate, daysOfWeek);
 
+  // Free trial: per-slot availability (30-minute slots, 1 person per slot, German time)
+  if (course.slug === TRIAL_SLUG) {
+    const sorted = [...availableDates].sort();
+    const busy = sorted.length
+      ? await getBusyIntervals(
+          new Date(berlinEpoch(sorted[0], '00:00')),
+          new Date(berlinEpoch(sorted[sorted.length - 1], '23:59'))
+        )
+      : [];
+    const bookings = sorted.length
+      ? await prisma.booking.findMany({
+          where: { courseId: course.id, bookingDate: { in: sorted }, status: { not: 'cancelled' } },
+          select: { bookingDate: true, timeSlot: true },
+        })
+      : [];
+    const taken = new Set(bookings.map((b) => `${b.bookingDate}|${b.timeSlot.split('-')[0]}`));
+    const allSlots = generateTrialSlots();
+
+    const slotsByDate: Record<string, string[]> = {};
+    const trialAvailability = sorted.map((date) => {
+      const free = allSlots
+        .filter((s) => hasEnoughNotice(date, s.start))
+        .filter((s) => !taken.has(`${date}|${s.start}`))
+        .filter((s) => !slotOverlapsBusy(busy, date, s.start, s.end))
+        .map((s) => s.start);
+      slotsByDate[date] = free;
+      return { date, total: allSlots.length, booked: allSlots.length - free.length, remaining: free.length, isFull: free.length === 0 };
+    });
+
+    return NextResponse.json({
+      course: { slug: course.slug, name: course.name, startTime: course.startTime, endTime: course.endTime, capacity: course.capacity },
+      availability: trialAvailability,
+      slots: slotsByDate,
+    });
+  }
+
   // Get booking counts for all dates in one query
   const dbAvailability = await getBulkAvailability(course.id, availableDates, course.capacity);
 
@@ -56,8 +93,8 @@ export async function GET(req: NextRequest) {
   if (availableDates.length > 0) {
     const sorted = [...availableDates].sort();
     const busy = await getBusyIntervals(
-      new Date(`${sorted[0]}T00:00:00+05:30`),
-      new Date(`${sorted[sorted.length - 1]}T23:59:59+05:30`)
+      new Date(berlinEpoch(sorted[0], '00:00')),
+      new Date(berlinEpoch(sorted[sorted.length - 1], '23:59'))
     );
     if (busy.length > 0) {
       availability = dbAvailability.map((a) =>

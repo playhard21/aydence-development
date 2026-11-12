@@ -91,7 +91,7 @@ export function formatDateForDisplay(dateStr: string): string {
 }
 
 /**
- * Format time range for display: "5:00 - 6:00 PM IST"
+ * Format time range for display: "10:00 - 10:30 AM German time"
  */
 export function formatTimeForDisplay(startTime: string, endTime: string): string {
   const formatTime = (t: string) => {
@@ -118,7 +118,7 @@ export function formatTimeForDisplay(startTime: string, endTime: string): string
 
   const endFormatted = formatTime(endTime);
 
-  return `${startFormatted} - ${endFormatted} IST`;
+  return `${startFormatted} - ${endFormatted} (German time)`;
 }
 
 /**
@@ -141,7 +141,7 @@ export function generateGoogleCalendarLink(params: {
   const url = new URL('https://calendar.google.com/calendar/r/eventedit');
   url.searchParams.set('text', title);
   url.searchParams.set('dates', `${dateClean}T${startClean}/${dateClean}T${endClean}`);
-  url.searchParams.set('ctz', 'Asia/Kolkata');
+  url.searchParams.set('ctz', 'Europe/Berlin');
   url.searchParams.set('details', description);
 
   return url.toString();

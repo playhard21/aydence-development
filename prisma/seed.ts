@@ -5,53 +5,39 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding database...');
 
-  // Upsert A1 New Batch
-  const a1New = await prisma.course.upsert({
-    where: { slug: 'a1-new' },
+  // Free trial session: Mon-Fri, 30-minute slots between 10:00 and 18:00 German time,
+  // 1 person per slot. startTime/endTime are the opening window; the slots are generated in app/lib/trial.ts.
+  const trial = await prisma.course.upsert({
+    where: { slug: 'free-trial' },
     update: {
-      description: 'Complete beginner German course starting from scratch. Focused on foundational grammar and immediate conversational utility.',
-      startDate: '2026-06-01',
-      daysOfWeek: '1,3,5', // Monday, Wednesday, Friday
-      startTime: '17:00',
+      name: 'Free trial session',
+      description: 'A short, free online session with Dr. Shoba Kapoor.',
+      daysOfWeek: '1,2,3,4,5',
+      startTime: '10:00',
       endTime: '18:00',
+      capacity: 1,
+      isActive: true,
     },
     create: {
-      slug: 'a1-new',
-      name: 'A1 New Batch',
-      description: 'Complete beginner German course starting from scratch. Focused on foundational grammar and immediate conversational utility.',
-      startDate: '2026-06-01',
-      daysOfWeek: '1,3,5', // Monday, Wednesday, Friday
-      startTime: '17:00',
+      slug: 'free-trial',
+      name: 'Free trial session',
+      description: 'A short, free online session with Dr. Shoba Kapoor.',
+      startDate: '2026-01-01',
+      daysOfWeek: '1,2,3,4,5',
+      startTime: '10:00',
       endTime: '18:00',
-      capacity: 4,
+      capacity: 1,
       isActive: true,
     },
   });
 
-  // Upsert A1 Repetition
-  const a1Rep = await prisma.course.upsert({
-    where: { slug: 'a1-rep' },
-    update: {
-      description: 'Repetition week starting 11th May. This batch goes into A2 from 18th May and will finish B1 by the end of the year.',
-      startDate: '2026-05-11',
-      daysOfWeek: '1,2,3,4,5', // Monday through Friday
-      startTime: '19:30',
-      endTime: '20:30',
-    },
-    create: {
-      slug: 'a1-rep',
-      name: 'A1 Repetition',
-      description: 'Repetition week starting 11th May. This batch goes into A2 from 18th May and will finish B1 by the end of the year.',
-      startDate: '2026-05-11',
-      daysOfWeek: '1,2,3,4,5', // Monday through Friday
-      startTime: '19:30',
-      endTime: '20:30',
-      capacity: 8,
-      isActive: true,
-    },
+  // The old A1/A2 batches are gone from the site. Keep the rows (old bookings point to them), but hide them.
+  const hidden = await prisma.course.updateMany({
+    where: { slug: { in: ['a1-new', 'a1-rep'] } },
+    data: { isActive: false },
   });
 
-  console.log('✅ Seeded courses:', { a1New: a1New.name, a1Rep: a1Rep.name });
+  console.log('✅ Seeded:', { trial: trial.name, deactivatedOldCourses: hidden.count });
 }
 
 main()

@@ -13,11 +13,13 @@
  * The system works without Calendar — bookings and emails function independently.
  */
 
+import { berlinOffset, berlinEpoch, TRIAL_TIMEZONE } from './trial';
+
 interface CalendarEventParams {
   title: string;
   date: string;       // "YYYY-MM-DD"
-  startTime: string;  // "HH:mm" IST
-  endTime: string;    // "HH:mm" IST
+  startTime: string;  // "HH:mm" German time
+  endTime: string;    // "HH:mm" German time
   description: string;
   attendeeEmail?: string;
 }
@@ -60,20 +62,21 @@ export async function createCalendarEvent(params: CalendarEventParams): Promise<
 
     const calendar = google.calendar({ version: 'v3', auth });
 
-    // Build IST datetime strings in ISO format
-    const startDateTime = `${params.date}T${params.startTime}:00+05:30`;
-    const endDateTime = `${params.date}T${params.endTime}:00+05:30`;
+    // Build German-time datetime strings in ISO format
+    const offset = berlinOffset(params.date);
+    const startDateTime = `${params.date}T${params.startTime}:00${offset}`;
+    const endDateTime = `${params.date}T${params.endTime}:00${offset}`;
 
     const event: Record<string, unknown> = {
       summary: params.title,
       description: params.description,
       start: {
         dateTime: startDateTime,
-        timeZone: 'Asia/Kolkata',
+        timeZone: TRIAL_TIMEZONE,
       },
       end: {
         dateTime: endDateTime,
-        timeZone: 'Asia/Kolkata',
+        timeZone: TRIAL_TIMEZONE,
       },
     };
 
@@ -151,14 +154,14 @@ export async function getBusyIntervals(timeMin: Date, timeMax: Date): Promise<Bu
   }
 }
 
-/** True if the course slot (date + IST start/end) overlaps any busy interval. */
+/** True if the slot (date + German-time start/end) overlaps any busy interval. */
 export function slotOverlapsBusy(
   busy: BusyInterval[],
   date: string,
   startTime: string,
   endTime: string
 ): boolean {
-  const s = new Date(`${date}T${startTime}:00+05:30`).getTime();
-  const e = new Date(`${date}T${endTime}:00+05:30`).getTime();
+  const s = berlinEpoch(date, startTime);
+  const e = berlinEpoch(date, endTime);
   return busy.some((b) => b.start < e && b.end > s);
 }

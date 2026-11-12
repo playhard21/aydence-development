@@ -6,12 +6,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../lib/db';
 import { validateBookingInput } from '../../lib/validation';
-import { isSlotAvailable, checkDuplicateBooking, getSlotAvailability } from '../../lib/availability';
+import { checkDuplicateBooking } from '../../lib/availability';
 import { generateBookingId } from '../../lib/booking-id';
 import { checkRateLimit } from '../../lib/rate-limit';
 import { sendCustomerConfirmation, sendAdminNotification } from '../../lib/email';
 import { createCalendarEvent, getBusyIntervals, slotOverlapsBusy } from '../../lib/calendar';
 import { parseDaysOfWeek, isValidCourseDay } from '../../lib/courses';
+import { isTrialSlotStart, hasEnoughNotice, berlinEpoch } from '../../lib/trial';
 import {
   logBookingCreated,
   logBookingFailed,
@@ -46,7 +47,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { courseSlug, date, name, email, phone, notes } = validation.sanitized;
+    const { courseSlug, date, time, name, email, phone, interest, level, location, notes: message } = validation.sanitized;
+    const notes = [`Interested in: ${interest}`, `German level: ${level}`, `Lives in: ${location}`, message ? `Message: ${message}` : '']
+      .filter(Boolean)
+      .join('\n');
 
     // 3. Fetch the course from DB
     const course = await prisma.course.findUnique({ where: { slug: courseSlug } });
@@ -76,22 +80,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 6. Check slot availability
-    const available = await isSlotAvailable(course.id, date, course.capacity);
-    if (!available) {
-      const avail = await getSlotAvailability(course.id, date, course.capacity);
-      return NextResponse.json(
-        { message: 'This slot is no longer available. All spots are taken.', availability: avail },
-        { status: 409 }
-      );
+    // 6. The 30-minute slot (German time) must still be free, 1 person per slot
+    const slot = isTrialSlotStart(time)!;
+    if (!hasEnoughNotice(date, slot.start)) {
+      return NextResponse.json({ message: 'This time is too soon. Please choose a later slot.' }, { status: 400 });
+    }
+    const timeSlot = `${slot.start}-${slot.end}`;
+    const taken = await prisma.booking.count({
+      where: { courseId: course.id, bookingDate: date, timeSlot, status: { not: 'cancelled' } },
+    });
+    if (taken >= course.capacity) {
+      return NextResponse.json({ message: 'This slot is no longer available. Please choose another time.' }, { status: 409 });
     }
 
     // 6b. Reject if the owner's Google Calendar is busy during this slot
     const busy = await getBusyIntervals(
-      new Date(`${date}T00:00:00+05:30`),
-      new Date(`${date}T23:59:59+05:30`)
+      new Date(berlinEpoch(date, '00:00')),
+      new Date(berlinEpoch(date, '23:59'))
     );
-    if (slotOverlapsBusy(busy, date, course.startTime, course.endTime)) {
+    if (slotOverlapsBusy(busy, date, slot.start, slot.end)) {
       return NextResponse.json(
         { message: 'This slot is no longer available.' },
         { status: 409 }
@@ -118,7 +125,6 @@ export async function POST(req: NextRequest) {
     const bookingId = await generateBookingId(date);
 
     // 9. Create the booking
-    const timeSlot = `${course.startTime}-${course.endTime}`;
     const booking = await prisma.booking.create({
       data: {
         bookingId,
@@ -129,7 +135,7 @@ export async function POST(req: NextRequest) {
         bookingDate: date,
         timeSlot,
         notes: notes || null,
-        status: 'confirmed',
+        status: 'pending', // Shoba confirms the appointment by email
       },
     });
 
@@ -143,8 +149,8 @@ export async function POST(req: NextRequest) {
       customerPhone: phone,
       courseName: course.name,
       bookingDate: date,
-      startTime: course.startTime,
-      endTime: course.endTime,
+      startTime: slot.start,
+      endTime: slot.end,
       notes,
       createdAt: booking.createdAt,
     };
@@ -166,12 +172,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (adminEmailResult.status === 'fulfilled' && adminEmailResult.value.success) {
-      await logEmailSent(bookingId, process.env.ADMIN_EMAIL || 'tech@aydence.de', 'admin');
+      await logEmailSent(bookingId, process.env.ADMIN_EMAIL || 'info@aydence.de', 'admin');
     } else {
       const error = adminEmailResult.status === 'fulfilled'
         ? adminEmailResult.value.error || 'Unknown'
         : adminEmailResult.reason?.message || 'Unknown';
-      await logEmailFailed(bookingId, process.env.ADMIN_EMAIL || 'tech@aydence.de', 'admin', error);
+      await logEmailFailed(bookingId, process.env.ADMIN_EMAIL || 'info@aydence.de', 'admin', error);
     }
 
     // 11. Sync to Google Calendar (non-blocking)
@@ -179,8 +185,8 @@ export async function POST(req: NextRequest) {
       const eventId = await createCalendarEvent({
         title: `${course.name} - ${name}`,
         date,
-        startTime: course.startTime,
-        endTime: course.endTime,
+        startTime: slot.start,
+        endTime: slot.end,
         description: `Email: ${email}\nPhone: ${phone || 'Not provided'}\nNotes: ${notes || 'None'}\nBooking ID: ${bookingId}`,
         attendeeEmail: email,
       });
@@ -200,7 +206,7 @@ export async function POST(req: NextRequest) {
     // 12. Return success
     return NextResponse.json({
       success: true,
-      message: 'Booking confirmed! Check your email for details.',
+      message: 'Thank you! I will confirm your appointment by email shortly.',
       booking: {
         bookingId,
         courseName: course.name,

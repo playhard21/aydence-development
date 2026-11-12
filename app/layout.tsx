@@ -10,13 +10,15 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Aydence — Expert Career Strategy for Germany',
+  title: 'Aydence – Speaking Coaching (B1 Level) with Dr. Shoba Kapoor',
   description:
-    'Dr. rer. nat. Shoba Kapoor guides professionals, researchers, and students to build successful careers in Germany. Webinars, courses, and personal coaching.',
-  keywords: 'Germany career strategy, PhD Germany, German job market, Aydence, Shoba Kapoor',
+    'Build your career in Germany by speaking German with confidence: 9-week Speaking Coaching (B1 Level) online with Dr. Shoba Kapoor.',
+  keywords:
+    'German speaking coaching B1, communication coach, speak German confidently, career in Germany, Shoba Kapoor',
   openGraph: {
-    title: 'Aydence — Expert Career Strategy for Germany',
-    description: 'Personalized guidance for your career move to Germany.',
+    title: 'Aydence – Speaking Coaching (B1 Level) with Dr. Shoba Kapoor',
+    description:
+      'Build your career in Germany by speaking German with confidence: 9-week Speaking Coaching (B1 Level) online with Dr. Shoba Kapoor.',
     type: 'website',
   },
 };

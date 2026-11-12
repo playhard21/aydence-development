@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { ScrollReveal, fadeLeft } from './AnimationHelpers';
 import { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
+import { WHATSAPP_URL, BOOKING_URL, COACHING_URL, INSTAGRAM_URL, LINKEDIN_URL } from '../lib/links';
 
 interface QuickLink {
   label: string;
@@ -23,19 +24,21 @@ interface SocialLink {
 }
 
 const quickLinks: QuickLink[] = [
-  { label: 'Advanced German (C1+)', href: '/advanced-german' },
-  { label: 'Booking', href: '/booking' },
+  { label: 'Speaking Coaching (B1 Level)', href: COACHING_URL },
+  { label: 'WhatsApp', href: WHATSAPP_URL },
   { label: 'About', href: '/#about' },
 ];
 
 const legal: LegalLink[] = [
-  { label: 'Terms of Use', href: '/agb' },
+  { label: 'Impressum', href: '/impressum' },
+  { label: 'Datenschutz', href: '/datenschutz' },
+  { label: 'AGB', href: '/agb' },
 ];
 
 const socials: SocialLink[] = [
   {
     label: 'LinkedIn',
-    href: 'https://linkedin.com/in/drshobakapoor',
+    href: LINKEDIN_URL,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
         <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
@@ -45,7 +48,7 @@ const socials: SocialLink[] = [
   },
   {
     label: 'Instagram',
-    href: 'https://www.instagram.com/aydence_germany?igsh=aHk4YnRoNGlyNTZp',
+    href: INSTAGRAM_URL,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
@@ -80,29 +83,29 @@ export default function Footer() {
             
             <ScrollReveal custom={1}>
               <h2 className="font-bold text-slate-900 mb-6 mx-auto text-4xl md:text-5xl lg:text-6xl tracking-tight max-w-3xl">
-                Ready to Master German?
+                Ready to Speak German with Confidence?
               </h2>
             </ScrollReveal>
 
             <ScrollReveal custom={2} className="mb-12">
               <p className="text-slate-600 text-lg md:text-xl font-light max-w-2xl mx-auto">
-                Join the webinar to understand the methodology or book your 1:1 performance sessions today.
+                Book a free trial session with me. I will check your level and tell you honestly whether the coaching is right for you. Coming in 2027: my books “German for Indians” A1 and A2, and monthly workshops on pronunciation, grammar and interviews.
               </p>
             </ScrollReveal>
 
             <ScrollReveal custom={3}>
               <div className="flex flex-wrap gap-6 justify-center">
                 <Link
-                  href="/advanced-german"
+                  href={BOOKING_URL}
                   className="bg-slate-900 text-white font-bold px-8 py-4 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-sm md:text-base uppercase tracking-wider"
                 >
-                  Join Webinar for €1
+                  Book your free trial session →
                 </Link>
                 <Link
-                  href="/booking"
+                  href={COACHING_URL}
                   className="glass border border-slate-200 text-slate-900 font-bold px-8 py-4 rounded-full hover:bg-slate-100 hover:border-slate-300 hover:scale-105 transition-all text-sm md:text-base uppercase tracking-wider"
                 >
-                  Book 1:1 Sessions
+                  Speaking Coaching (B1 Level) →
                 </Link>
               </div>
             </ScrollReveal>
@@ -128,7 +131,7 @@ export default function Footer() {
                 />
               </Link>
               <p className="text-slate-600 text-base leading-relaxed font-light max-w-sm">
-                Aydence provides performance-based language and cultural integration guidance for advanced learners in Germany.
+                I help people from abroad speak German with confidence, for life and work in Germany. Online, from Göttingen.
               </p>
 
               {/* Socials */}

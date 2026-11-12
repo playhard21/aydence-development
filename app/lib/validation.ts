@@ -2,13 +2,19 @@
  * Input validation and sanitization for booking submissions.
  */
 
+import { TRIAL_SLUG, INTEREST_OPTIONS, LEVEL_OPTIONS, LOCATION_OPTIONS, isTrialSlotStart } from './trial';
+
 export interface BookingInput {
   courseSlug: string;
   date: string;
   name: string;
   email: string;
+  time: string;
   phone?: string;
   notes?: string;
+  interest: string;
+  level: string;
+  location: string;
 }
 
 export interface ValidationResult {
@@ -60,7 +66,7 @@ export function validateBookingInput(data: Record<string, unknown>): ValidationR
   const courseSlug = typeof data.courseSlug === 'string' ? sanitize(data.courseSlug) : '';
   if (!courseSlug) {
     errors.courseSlug = 'Please select a course.';
-  } else if (!['a1-new', 'a1-rep'].includes(courseSlug)) {
+  } else if (courseSlug !== TRIAL_SLUG) {
     errors.courseSlug = 'Invalid course selection.';
   }
 
@@ -70,6 +76,14 @@ export function validateBookingInput(data: Record<string, unknown>): ValidationR
     errors.date = 'Please select a date.';
   } else if (!isValidFutureDate(date)) {
     errors.date = 'Please select a valid future date.';
+  }
+
+  // Time slot (start of a 30-minute slot, German time)
+  const time = typeof data.time === 'string' ? sanitize(data.time) : '';
+  if (!time) {
+    errors.time = 'Please select a time.';
+  } else if (!isTrialSlotStart(time)) {
+    errors.time = 'Please select a valid time.';
   }
 
   // Name
@@ -90,6 +104,17 @@ export function validateBookingInput(data: Record<string, unknown>): ValidationR
     errors.email = 'Please enter a valid email address.';
   }
 
+  // Dropdowns
+  const interest = typeof data.interest === 'string' ? sanitize(data.interest) : '';
+  if (!(INTEREST_OPTIONS as readonly string[]).includes(interest)) errors.interest = 'Please choose what you are interested in.';
+  const level = typeof data.level === 'string' ? sanitize(data.level) : '';
+  if (!(LEVEL_OPTIONS as readonly string[]).includes(level)) errors.level = 'Please choose your current German level.';
+  const location = typeof data.location === 'string' ? sanitize(data.location) : '';
+  if (!(LOCATION_OPTIONS as readonly string[]).includes(location)) errors.location = 'Please tell us where you live.';
+
+  // Privacy consent
+  if (data.consent !== true) errors.consent = 'Please agree to the privacy policy.';
+
   // Phone (optional)
   const phone = typeof data.phone === 'string' ? sanitize(data.phone) : '';
 
@@ -102,10 +127,14 @@ export function validateBookingInput(data: Record<string, unknown>): ValidationR
     sanitized: {
       courseSlug,
       date,
+      time,
       name,
       email,
       phone: phone || undefined,
       notes: notes || undefined,
+      interest,
+      level,
+      location,
     },
   };
 }

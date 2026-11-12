@@ -36,18 +36,21 @@ export default function HomeHero() {
       <div className="centered-content relative z-10 w-full flex flex-col lg:flex-row items-center justify-between gap-12">
         {/* Left Column: Text */}
         <div ref={textRef} className="w-full lg:w-1/2 max-w-2xl">
+          <p className="text-sm md:text-base uppercase tracking-widest font-semibold text-[var(--c-accent-primary)] mb-4">
+            Dr. Shoba Kapoor · Communication Coach
+          </p>
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-tight text-[var(--c-navy)]">
             Build a Thriving Career in Germany
           </h1>
           <p className="text-xl md:text-2xl text-[var(--c-muted)] mb-10 font-medium max-w-xl">
-            Expert career strategy and professionalism coaching with Dr. Shoba Kapoor.
+            Your career in Germany depends on how you speak. In my 9-week Speaking Coaching (B1 Level), we train the conversations that matter: small talk, phone calls and appointments, WG-Castings and job interviews.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <Link href="#about" className="px-8 py-4 bg-[var(--c-accent-primary)] hover:bg-orange-700 text-white font-bold rounded-[var(--radius-pill)] transition-all flex items-center justify-center shadow-xl hover:-translate-y-1">
-              Learn More
+            <Link href="/booking" className="px-8 py-4 bg-[var(--c-accent-primary)] hover:bg-orange-700 text-white font-bold rounded-[var(--radius-pill)] transition-all flex items-center justify-center shadow-xl hover:-translate-y-1">
+              Book your free trial session →
             </Link>
             <Link href="/advanced-german" className="px-8 py-4 bg-transparent border-2 border-[var(--c-navy-light)] hover:bg-[var(--c-navy)] hover:text-white text-[var(--c-navy)] font-bold rounded-[var(--radius-pill)] transition-all flex items-center justify-center shadow-lg hover:-translate-y-1">
-              Advanced German (C1+)
+              Speaking Coaching (B1 Level)
             </Link>
           </div>
         </div>

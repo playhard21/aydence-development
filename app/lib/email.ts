@@ -1,22 +1,39 @@
 /**
- * Email service using Nodemailer and Gmail.
+ * Email service using Nodemailer.
  * Sends confirmation emails to customer and admin.
+ *
+ * Transport (chosen by environment variables):
+ *  - AWS SES SMTP when SES_SMTP_USER and SES_SMTP_PASS are set (preferred).
+ *    Region eu-central-1; the From address must be a verified SES identity
+ *    (info@aydence.de is). SMTP credentials come from an IAM user with only
+ *    ses:SendRawEmail, converted to SMTP credentials (not the raw access keys).
+ *  - Gmail SMTP otherwise (GMAIL_USER, GMAIL_APP_PASSWORD). Kept as a fallback
+ *    until the SES credentials exist on the server.
  */
 
 import nodemailer from 'nodemailer';
-import { formatDateForDisplay, formatTimeForDisplay, generateGoogleCalendarLink } from './courses';
+import { formatDateForDisplay, formatTimeForDisplay } from './courses';
 
-// Create a Nodemailer transporter using Gmail
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
+const useSes = Boolean(process.env.SES_SMTP_USER && process.env.SES_SMTP_PASS);
 
-const EMAIL_FROM = process.env.EMAIL_FROM || `Aydence <${process.env.GMAIL_USER}>`;
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || process.env.GMAIL_USER || 'tech@aydence.de';
+const transporter = useSes
+  ? nodemailer.createTransport({
+      host: process.env.SES_SMTP_HOST || 'email-smtp.eu-central-1.amazonaws.com',
+      port: 587, // STARTTLS
+      secure: false,
+      auth: { user: process.env.SES_SMTP_USER, pass: process.env.SES_SMTP_PASS },
+    })
+  : nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    });
+
+// With SES, EMAIL_FROM must use a verified identity, e.g. "Aydence <info@aydence.de>".
+const EMAIL_FROM = process.env.EMAIL_FROM || (useSes ? 'Aydence <info@aydence.de>' : `Aydence <${process.env.GMAIL_USER}>`);
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'info@aydence.de';
 
 interface BookingEmailData {
   bookingId: string;
@@ -38,14 +55,6 @@ export async function sendCustomerConfirmation(data: BookingEmailData): Promise<
   const displayDate = formatDateForDisplay(data.bookingDate);
   const displayTime = formatTimeForDisplay(data.startTime, data.endTime);
 
-  const calendarLink = generateGoogleCalendarLink({
-    title: `${data.courseName} - Aydence`,
-    date: data.bookingDate,
-    startTime: data.startTime,
-    endTime: data.endTime,
-    description: `German Language Course by Aydence.\n\nBooking ID: ${data.bookingId}\n\nIf you have any questions, reply to this email.`,
-  });
-
   const html = `
 <!DOCTYPE html>
 <html>
@@ -57,7 +66,7 @@ export async function sendCustomerConfirmation(data: BookingEmailData): Promise<
   <div style="max-width:560px;margin:0 auto;padding:40px 20px;">
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#1a2e6b,#2563eb);border-radius:16px 16px 0 0;padding:32px;text-align:center;">
-      <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Booking Confirmed ✓</h1>
+      <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Thank you!</h1>
     </div>
     
     <!-- Body -->
@@ -66,14 +75,14 @@ export async function sendCustomerConfirmation(data: BookingEmailData): Promise<
         Hello <strong>${data.customerName}</strong>,
       </p>
       <p style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
-        Your booking has been confirmed! Here are your details:
+        Thank you! I will confirm your appointment by email shortly.<br><br>Your requested appointment:
       </p>
 
       <!-- Booking Details Card -->
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:24px;">
         <table style="width:100%;border-collapse:collapse;">
           <tr>
-            <td style="padding:8px 0;color:#6b7280;font-size:13px;font-weight:500;">COURSE</td>
+            <td style="padding:8px 0;color:#6b7280;font-size:13px;font-weight:500;">SESSION</td>
             <td style="padding:8px 0;color:#111827;font-size:14px;font-weight:600;text-align:right;">${data.courseName}</td>
           </tr>
           <tr>
@@ -91,13 +100,6 @@ export async function sendCustomerConfirmation(data: BookingEmailData): Promise<
         </table>
       </div>
 
-      <!-- Calendar Button -->
-      <div style="text-align:center;margin-bottom:24px;">
-        <a href="${calendarLink}" target="_blank" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600;">
-          📅 Add to Google Calendar
-        </a>
-      </div>
-
       <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.6;text-align:center;">
         If you have any questions, simply reply to this email.
       </p>
@@ -105,7 +107,7 @@ export async function sendCustomerConfirmation(data: BookingEmailData): Promise<
 
     <!-- Footer -->
     <div style="text-align:center;padding:24px 0;color:#9ca3af;font-size:12px;">
-      <p style="margin:0;">Aydence — Expert Career Strategy for Germany</p>
+      <p style="margin:0;">Aydence – Speaking Coaching (B1 Level) with Dr. Shoba Kapoor</p>
     </div>
   </div>
 </body>
@@ -115,7 +117,7 @@ export async function sendCustomerConfirmation(data: BookingEmailData): Promise<
     await transporter.sendMail({
       from: EMAIL_FROM,
       to: data.customerEmail,
-      subject: 'Your German Course Booking Confirmed - Aydence',
+      subject: 'Your free trial session request - Aydence',
       html,
     });
     return { success: true };
@@ -143,7 +145,7 @@ export async function sendAdminNotification(data: BookingEmailData): Promise<{ s
 <body style="margin:0;padding:0;background:#f8f9fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="max-width:560px;margin:0 auto;padding:40px 20px;">
     <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;padding:32px;">
-      <h2 style="margin:0 0 20px;color:#111827;font-size:18px;">📋 New Booking Received</h2>
+      <h2 style="margin:0 0 20px;color:#111827;font-size:18px;">📋 New Trial Session Request</h2>
       
       <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-bottom:20px;">
         <p style="margin:0;color:#166534;font-size:14px;font-weight:600;">Booking ID: ${data.bookingId}</p>
@@ -181,9 +183,9 @@ export async function sendAdminNotification(data: BookingEmailData): Promise<{ s
         </tr>
       </table>
 
-      <h3 style="margin:0 0 12px;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Notes</h3>
+      <h3 style="margin:0 0 12px;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Details</h3>
       <p style="margin:0 0 20px;color:#374151;font-size:14px;background:#f9fafb;padding:12px;border-radius:8px;">
-        ${data.notes || 'None'}
+        ${(data.notes || 'None').replace(/\n/g, '<br>')}
       </p>
 
       <div style="border-top:1px solid #e5e7eb;padding-top:16px;">
@@ -199,7 +201,7 @@ export async function sendAdminNotification(data: BookingEmailData): Promise<{ s
       from: EMAIL_FROM,
       to: ADMIN_EMAIL,
       replyTo: data.customerEmail,
-      subject: `New Booking: ${data.customerName} - ${data.courseName}`,
+      subject: `New trial session request: ${data.customerName}`,
       html,
     });
     return { success: true };

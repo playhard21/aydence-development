@@ -1,20 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { WHATSAPP_URL } from "../lib/links";
 
-interface CourseData {
-  slug: string;
-  name: string;
-  description: string;
-  startDate: string;
-  daysOfWeek: string;
-  startTime: string;
-  endTime: string;
-  capacity: number;
-  enrolled: number;
-  spotsLeft: number;
-}
+const COURSE_SLUG = "free-trial";
+const INTEREST_OPTIONS = ["Free trial session", "Speaking Coaching (B1 Level)", "Personal Translation Assistance"];
+const LEVEL_OPTIONS = ["Not sure", "A1", "A2", "B1", "B2 or higher"];
+const LOCATION_OPTIONS = ["Germany", "India", "Other"];
 
 interface SlotAvailability {
   date: string;
@@ -25,57 +18,48 @@ interface SlotAvailability {
 }
 
 export default function BookingPage() {
-  const router = useRouter();
-  const [courses, setCourses] = useState<CourseData[]>([]);
-  const [selectedCourse, setSelectedCourse] = useState("");
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
   });
   const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
   const [availability, setAvailability] = useState<SlotAvailability[]>([]);
+  const [slots, setSlots] = useState<Record<string, string[]>>({});
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [interest, setInterest] = useState(INTEREST_OPTIONS[0]);
+  const [level, setLevel] = useState("");
+  const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
+  const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const [duplicateWarning, setDuplicateWarning] = useState<{ message: string; existingBooking: { bookingId: string; date: string } } | null>(null);
+  const [submitted, setSubmitted] = useState("");
+  const [duplicateWarning, setDuplicateWarning] = useState<{ message: string } | null>(null);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
 
-  // Fetch courses on mount
-  useEffect(() => {
-    fetch("/api/courses")
-      .then((r) => r.json())
-      .then((data) => {
-        setCourses(data.courses || []);
-        if (data.courses?.length > 0) setSelectedCourse(data.courses[0].slug);
-      })
-      .catch(console.error);
-  }, []);
-
-  // Fetch availability when course or month changes
+  // Fetch availability when the month changes
   const fetchAvailability = useCallback(async () => {
-    if (!selectedCourse) return;
     setLoadingAvailability(true);
     const monthStr = `${calendarMonth.year}-${String(calendarMonth.month + 1).padStart(2, "0")}`;
     try {
-      const res = await fetch(`/api/availability?course=${selectedCourse}&month=${monthStr}`);
+      const res = await fetch(`/api/availability?course=${COURSE_SLUG}&month=${monthStr}`);
       const data = await res.json();
       setAvailability(data.availability || []);
-    } catch { setAvailability([]); }
+      setSlots(data.slots || {});
+    } catch { setAvailability([]); setSlots({}); }
     setLoadingAvailability(false);
-  }, [selectedCourse, calendarMonth]);
+  }, [calendarMonth]);
 
   useEffect(() => { fetchAvailability(); }, [fetchAvailability]);
 
-  // Reset date when course changes
-  useEffect(() => { setSelectedDate(""); }, [selectedCourse]);
+  // Reset the time when the date changes
+  useEffect(() => { setSelectedTime(""); }, [selectedDate]);
 
-  const currentCourse = courses.find((c) => c.slug === selectedCourse);
-  const courseDays = currentCourse ? currentCourse.daysOfWeek.split(",").map(Number) : [];
-  const selectedSlotInfo = availability.find((a) => a.date === selectedDate);
+  const freeTimes = slots[selectedDate] || [];
 
   // Calendar helpers
   const daysInMonth = new Date(calendarMonth.year, calendarMonth.month + 1, 0).getDate();
@@ -98,17 +82,20 @@ export default function BookingPage() {
     return availability.some((a) => a.date === dateStr && a.isFull);
   };
   const isDayCourseDay = (day: number) => {
-    const d = new Date(calendarMonth.year, calendarMonth.month, day);
-    return courseDays.includes(d.getDay());
+    const wd = new Date(calendarMonth.year, calendarMonth.month, day).getDay();
+    return wd >= 1 && wd <= 5; // Mon-Fri
   };
 
   // Client-side validation
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!selectedCourse) e.course = "Please select a course.";
     if (!selectedDate) e.date = "Please select a date.";
-    if (!name || name.trim().length < 2) e.name = "Full name is required (min 2 characters).";
+    else if (!selectedTime) e.time = "Please select a time.";
+    if (!name || name.trim().length < 2) e.name = "Name is required (min 2 characters).";
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Valid email is required.";
+    if (!level) e.level = "Please choose your current German level.";
+    if (!location) e.location = "Please tell us where you live.";
+    if (!consent) e.consent = "Please agree to the privacy policy.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -123,94 +110,68 @@ export default function BookingPage() {
       const res = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseSlug: selectedCourse, date: selectedDate, name: name.trim(), email: email.trim(), phone: phone.trim() || undefined, notes: notes.trim() || undefined, forceDuplicate }),
+        body: JSON.stringify({
+          courseSlug: COURSE_SLUG, date: selectedDate, time: selectedTime,
+          name: name.trim(), email: email.trim(), phone: phone.trim() || undefined,
+          interest, level, location, notes: notes.trim() || undefined, consent, forceDuplicate,
+        }),
       });
       const data = await res.json();
 
       if (!res.ok) {
         if (data.isDuplicate && !forceDuplicate) {
-          setDuplicateWarning({ message: data.message, existingBooking: data.existingBooking });
+          setDuplicateWarning({ message: data.message });
           setIsSubmitting(false);
           return;
         }
         setSubmitError(data.message || "Something went wrong.");
+        if (res.status === 409) fetchAvailability();
         setIsSubmitting(false);
         return;
       }
 
-      // Success — redirect to confirmation
-      const params = new URLSearchParams({
-        bookingId: data.booking.bookingId,
-        course: data.booking.courseName,
-        date: data.booking.date,
-        time: data.booking.timeSlot,
-        email: data.booking.customerEmail,
-      });
-      router.push(`/confirmation?${params.toString()}`);
+      setSubmitted(data.message || "Thank you! I will confirm your appointment by email shortly.");
+      setIsSubmitting(false);
     } catch {
       setSubmitError("Network error. Please try again.");
       setIsSubmitting(false);
     }
   };
 
-  const formatTime = (start: string, end: string) => {
-    const fmt = (t: string) => { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`; };
-    return `${fmt(start)} - ${fmt(end)} IST`;
+  const formatSlot = (start: string) => {
+    const [h, m] = start.split(":").map(Number);
+    const endMin = h * 60 + m + 30;
+    const end = `${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
+    return `${start} - ${end}`;
   };
+
+  const inputCls = (err?: string) =>
+    `w-full border rounded-lg px-3 py-3 text-[14px] text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-400 transition-colors bg-white ${err ? "border-red-400" : "border-gray-200"}`;
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12 px-4 flex justify-center font-sans">
+        <div className="w-full max-w-[600px] bg-white border border-gray-100 rounded-2xl p-8 shadow-sm text-center h-fit">
+          <h1 className="text-[20px] font-medium text-gray-900 mb-4">{submitted}</h1>
+          <p className="text-[14px] text-gray-500 mb-6">
+            {selectedDate} · {selectedTime && formatSlot(selectedTime)} (German time)
+          </p>
+          <Link href="/" className="text-blue-600 hover:underline text-[14px]">Back to the home page</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 flex justify-center font-sans">
       <div className="w-full max-w-[600px] bg-white border border-gray-100 rounded-2xl p-6 md:p-8 shadow-sm">
-        <h1 className="text-[20px] font-medium text-gray-900 mb-8">Book Your German Language Course</h1>
-
-        {/* Section 1: Course Selection */}
-        <section className="mb-10">
-          <div className="mb-4">
-            <h2 className="text-[16px] font-medium text-gray-900">Select a course</h2>
-            <p className="text-[14px] text-gray-500">Choose your level and batch below</p>
-          </div>
-          <div className="space-y-3">
-            {courses.map((c) => (
-              <label key={c.slug} className={`block border rounded-lg p-4 cursor-pointer transition-colors ${selectedCourse === c.slug ? "border-blue-600 bg-blue-50/30" : "border-gray-200 hover:border-gray-300"}`}>
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-1">
-                    <input type="radio" name="course" className="w-4 h-4 text-blue-600" checked={selectedCourse === c.slug} onChange={() => setSelectedCourse(c.slug)} />
-                  </div>
-                  <div className="flex-grow">
-                    <div className="flex flex-wrap justify-between items-start mb-1 gap-2">
-                      <span className="font-medium text-gray-900">{c.name}</span>
-                      <div className="flex gap-2 text-[12px]">
-                        <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{c.capacity} spots</span>
-                        <span className={`px-2 py-0.5 rounded-full ${c.spotsLeft > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                          {c.spotsLeft > 0 ? `${c.spotsLeft} left` : "Full"}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-[14px] text-gray-500">Starting {c.startDate} | {formatTime(c.startTime, c.endTime)}</p>
-                  </div>
-                </div>
-              </label>
-            ))}
-
-            {/* Disabled courses / Coming Soon */}
-            {[
-              { name: "B2/C1 Speaking German Professionally", sub: "Batch of 3/4 (2 paying) | Timing in discussion" },
-              { name: "German Literature (Weekend)", sub: "Timing TBD" }
-            ].map((c) => (
-              <div key={c.name} className="block border border-gray-200 rounded-lg p-4 opacity-50 bg-gray-50">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-1"><input type="radio" name="course" disabled className="w-4 h-4" /></div>
-                  <div><span className="font-medium text-gray-900">{c.name}</span><p className="text-[14px] text-gray-500">{c.sub}</p></div>
-                </div>
-              </div>
-            ))}
-          </div>
-          {errors.course && <p className="text-red-500 text-[13px] mt-2">{errors.course}</p>}
-        </section>
+        <h1 className="text-[20px] font-medium text-gray-900 mb-3">Book your free trial session</h1>
+        <p className="text-[14px] text-gray-500 mb-8">A short, free online session with me. I check your German level, answer your questions and tell you honestly whether the Speaking Coaching is right for you.</p>
 
         {/* Section 2: Calendar */}
         <section className="mb-10">
-          <h2 className="text-[16px] font-medium text-gray-900 mb-4">Select a date</h2>
+          <h2 className="text-[16px] font-medium text-gray-900 mb-1">Select a date</h2>
+          <p className="text-[13px] text-gray-500 mb-4">Monday to Friday, 10:00-18:00 German time (CET/CEST)</p>
           <div className="border border-gray-200 rounded-xl p-4 md:p-6">
             <div className="flex justify-between items-center mb-6">
               <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600">
@@ -260,17 +221,22 @@ export default function BookingPage() {
         </section>
 
         {/* Section 3: Time Slot */}
-        {currentCourse && selectedDate && (
+        {selectedDate && (
           <section className="mb-10">
-            <h2 className="text-[16px] font-medium text-gray-900 mb-4">Time slot</h2>
-            <div className={`py-3 px-4 rounded-lg border text-center transition-colors min-h-[44px] border-blue-600 bg-blue-50/30 text-blue-800 font-bold`}>
-              {formatTime(currentCourse.startTime, currentCourse.endTime)}
-            </div>
-            {selectedSlotInfo && (
-              <p className="text-[13px] text-gray-500 mt-2">
-                {selectedSlotInfo.remaining} {selectedSlotInfo.remaining === 1 ? "spot" : "spots"} available
-              </p>
+            <h2 className="text-[16px] font-medium text-gray-900 mb-4">Select a time (German time)</h2>
+            {freeTimes.length === 0 ? (
+              <p className="text-[14px] text-gray-500">No free times on this day. Please choose another date.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {freeTimes.map((t) => (
+                  <button key={t} type="button" onClick={() => setSelectedTime(t)}
+                    className={`py-2 px-2 rounded-lg border text-[13px] min-h-[44px] transition-colors ${selectedTime === t ? "border-blue-600 bg-blue-50/30 text-blue-800 font-bold" : "border-gray-200 text-gray-900 hover:bg-gray-100"}`}>
+                    {formatSlot(t)}
+                  </button>
+                ))}
+              </div>
             )}
+            {errors.time && <p className="text-red-500 text-[13px] mt-2">{errors.time}</p>}
           </section>
         )}
 
@@ -279,22 +245,48 @@ export default function BookingPage() {
           <h2 className="text-[16px] font-medium text-gray-900 mb-4">Your details</h2>
           <div className="space-y-4">
             <div>
-              <input type="text" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)}
-                className={`w-full border rounded-lg px-3 py-3 text-[14px] text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-400 transition-colors ${errors.name ? "border-red-400" : "border-gray-200"}`} />
+              <input type="text" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className={inputCls(errors.name)} />
               {errors.name && <p className="text-red-500 text-[12px] mt-1">{errors.name}</p>}
             </div>
             <div>
-              <input type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)}
-                className={`w-full border rounded-lg px-3 py-3 text-[14px] text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-400 transition-colors ${errors.email ? "border-red-400" : "border-gray-200"}`} />
+              <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls(errors.email)} />
               {errors.email && <p className="text-red-500 text-[12px] mt-1">{errors.email}</p>}
             </div>
             <div>
-              <input type="tel" placeholder="Phone (optional)" value={phone} onChange={(e) => setPhone(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-3 text-[14px] text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-400 transition-colors" />
+              <input type="tel" placeholder="Phone or WhatsApp number (optional)" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls()} />
             </div>
             <div>
-              <textarea placeholder="Any questions or notes?" value={notes} onChange={(e) => setNotes(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-3 text-[14px] text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-400 transition-colors min-h-[80px] resize-y" />
+              <label className="block text-[13px] text-gray-600 mb-1">What are you interested in?</label>
+              <select value={interest} onChange={(e) => setInterest(e.target.value)} className={inputCls()}>
+                {INTEREST_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[13px] text-gray-600 mb-1">Your current German level</label>
+              <select value={level} onChange={(e) => setLevel(e.target.value)} className={inputCls(errors.level)}>
+                <option value="" disabled>Please choose</option>
+                {LEVEL_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+              {errors.level && <p className="text-red-500 text-[12px] mt-1">{errors.level}</p>}
+            </div>
+            <div>
+              <label className="block text-[13px] text-gray-600 mb-1">Where do you live?</label>
+              <select value={location} onChange={(e) => setLocation(e.target.value)} className={inputCls(errors.location)}>
+                <option value="" disabled>Please choose</option>
+                {LOCATION_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+              {errors.location && <p className="text-red-500 text-[12px] mt-1">{errors.location}</p>}
+            </div>
+            <div>
+              <textarea placeholder="Message (optional)" value={notes} onChange={(e) => setNotes(e.target.value)}
+                className={`${inputCls()} min-h-[80px] resize-y`} />
+            </div>
+            <div>
+              <label className="flex items-start gap-2 text-[13px] text-gray-700">
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1" />
+                <span>I agree to the <Link href="/datenschutz" target="_blank" className="text-blue-600 underline">privacy policy</Link>.</span>
+              </label>
+              {errors.consent && <p className="text-red-500 text-[12px] mt-1">{errors.consent}</p>}
             </div>
           </div>
         </section>
@@ -315,9 +307,9 @@ export default function BookingPage() {
 
         {/* Section 5: Actions */}
         <div className="flex gap-4 pt-4 border-t border-gray-100">
-          <button onClick={() => router.back()} className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 py-3 px-4 rounded-lg font-medium transition-colors text-[14px] min-h-[44px]">
-            Cancel
-          </button>
+          <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 py-3 px-4 rounded-lg font-medium transition-colors text-[14px] min-h-[44px] flex items-center justify-center text-center">
+            Questions? WhatsApp me
+          </a>
           <button
             onClick={() => handleSubmit(false)}
             disabled={isSubmitting}
@@ -325,7 +317,7 @@ export default function BookingPage() {
           >
             {isSubmitting ? (
               <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>Processing...</>
-            ) : "Confirm Booking"}
+            ) : "Book your free trial session"}
           </button>
         </div>
       </div>

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import Link from 'next/link';
+import { WHATSAPP_URL } from '../lib/links';
 
 export default function WhatsAppButton() {
   const btnRef = useRef<HTMLAnchorElement>(null);
@@ -39,18 +40,18 @@ export default function WhatsAppButton() {
         ref={tooltipRef} 
         className="opacity-0 translate-x-2 mr-4 bg-white text-[var(--c-text)] text-sm font-medium px-4 py-2 rounded-lg shadow-lg border border-slate-100 whitespace-nowrap pointer-events-none"
       >
-        Join our community for daily German tips
+        Questions? WhatsApp me
       </div>
       
       <Link
-        href="https://chat.whatsapp.com/YOUR_GROUP_LINK_HERE"
+        href={WHATSAPP_URL}
         target="_blank"
         rel="noopener noreferrer"
         ref={btnRef as any}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className="flex items-center justify-center w-14 h-14 bg-[#25D366] text-white rounded-full shadow-lg hover:shadow-2xl hover:bg-[#20bd5a] outline-none relative transition-colors duration-300"
-        aria-label="Join our WhatsApp Group"
+        aria-label="Questions? WhatsApp me"
       >
         <svg 
           xmlns="http://www.w3.org/2000/svg" 

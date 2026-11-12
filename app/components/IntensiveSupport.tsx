@@ -38,14 +38,12 @@ export default function IntensiveSupport() {
           className="max-w-4xl mx-auto p-10 md:p-14 bg-white rounded-[var(--radius-card)] border border-[var(--c-accent-secondary)]/20 shadow-md flex flex-col md:flex-row items-center gap-10"
         >
           <div className="flex-1">
-            <h2 className="text-2xl md:text-3xl font-bold text-[var(--c-text)] mb-4">Need More Intensive Support?</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-[var(--c-text)] mb-4">Not sure if you are at B1?</h2>
             <p className="text-[var(--c-muted)] mb-6 leading-relaxed font-light text-lg">
-              For focused, individual training, you can book a 3-session intensive. We'll work specifically on your personal communication goals.
+              Book a free trial session with me and I will check your level. If you are not at B1 yet, my books “German for Indians” A1 and A2 will help you get there. They will be available in 2027.
             </p>
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-              <span className="text-4xl font-black text-[var(--c-text)]">€180</span>
-              <span className="text-[var(--c-subtle)] font-medium bg-[var(--bg-secondary)] px-3 py-1 rounded-full text-sm">for 3 sessions</span>
-              <span className="text-[var(--c-subtle)] font-medium bg-[var(--bg-secondary)] px-3 py-1 rounded-full text-sm">1:1 personalized</span>
+              <span className="text-4xl font-black text-[var(--c-text)]">Free</span>
             </div>
           </div>
           
@@ -54,7 +52,7 @@ export default function IntensiveSupport() {
               href="/booking"
               className="block w-full md:w-auto px-8 py-4 bg-[var(--bg-dark)] text-white text-center font-bold rounded-xl hover:bg-black transition-all duration-300"
             >
-              Book 1:1 intensive
+              Book your free trial session →
             </Link>
           </div>
         </div>

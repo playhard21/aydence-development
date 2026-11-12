@@ -38,11 +38,10 @@ export default function HeroSection() {
       <div className="centered-content relative z-10 text-center">
         <div ref={textRef} className="max-w-4xl mx-auto mb-10">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-tight text-[var(--c-text)]">
-            Advanced German (C1+) <br/>
-            <span className="text-[var(--c-accent-primary)]">Speak with Confidence and Precision</span>
+            <span className="text-[var(--c-accent-primary)]">Speaking Coaching (B1 Level)</span>
           </h1>
           <p className="text-xl md:text-2xl text-[var(--c-muted)] max-w-3xl mx-auto font-light leading-relaxed">
-            Move beyond "correct German" and learn how to express yourself clearly, naturally, and effectively in real conversations.
+            You know the grammar, but speaking still feels difficult? In this coaching we only speak. For 9 weeks we practise, in role plays and improvisation, the situations you will really face in Germany.
           </p>
         </div>
         
@@ -52,9 +51,9 @@ export default function HeroSection() {
               href="/booking" 
               className="px-8 py-4 bg-[var(--c-accent-primary)] hover:bg-orange-700 text-white font-medium rounded-xl shadow-lg transition-transform hover:scale-105 active:scale-95"
             >
-              Book your spot
+              Book your free trial session →
             </Link>
-            <span className="text-sm text-[var(--c-subtle)] mt-2 font-medium">8-week group program – €240</span>
+            <span className="text-sm text-[var(--c-subtle)] mt-2 font-medium">9 weeks · 27 sessions · €220</span>
           </div>
           
           <div className="flex flex-col items-center">
@@ -62,9 +61,8 @@ export default function HeroSection() {
               href="#pricing" 
               className="px-8 py-4 bg-transparent border-2 border-[var(--c-accent-primary)] text-[var(--c-accent-primary)] hover:bg-[var(--c-accent-primary)] hover:text-white font-medium rounded-xl transition-all hover:scale-105 active:scale-95"
             >
-              Join next group
+              See price
             </Link>
-            <span className="text-sm text-transparent mt-2 pointer-events-none">Placeholder</span>
           </div>
         </div>
       </div>

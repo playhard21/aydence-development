@@ -8,24 +8,24 @@ gsap.registerPlugin(ScrollTrigger);
 
 const trainingPoints = [
   {
-    title: "Clear and natural speaking",
-    description: "Learn to handle complex situations without hesitation or mental translation.",
+    title: "Weeks 1–2 · Small talk",
+    description: "How to start a conversation, ask follow-up questions and keep it going – with colleagues, neighbours and strangers.",
   },
   {
-    title: "Precision in Expression",
-    description: "Express opinions and arguments with the nuance expected at C1+ level.",
+    title: "Weeks 3–4 · Phone calls & appointments",
+    description: "Polite German (Sie), calling the doctor, writing to landlords on WG-Gesucht and arranging a flat viewing by phone.",
   },
   {
-    title: "Pronunciation & Flow",
-    description: "Master sentence melody and flow to sound more natural and professional.",
+    title: "Week 5 · Informal interview – the WG-Casting",
+    description: "Introducing yourself (du), answering questions and asking the right questions at a viewing.",
   },
   {
-    title: "Real-life Communication",
-    description: "Focus on actual conversations, not textbook scenarios or academic theory.",
+    title: "Weeks 6–8 · Formal interview – the job interview",
+    description: "The same introduction, now per Sie – tell me about yourself, strengths and weaknesses, where you see yourself in 5 years, and a final mock interview.",
   },
   {
-    title: "Social & Professional Confidence",
-    description: "Feel comfortable in both formal meetings and informal social settings.",
+    title: "Week 9 · Grammar check-up",
+    description: "Akkusativ & Dativ.",
   }
 ];
 

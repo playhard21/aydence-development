@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Link from 'next/link';
+import { WHATSAPP_URL } from '../lib/links';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -39,10 +40,10 @@ export default function CtaSection() {
           
           <div ref={contentRef} className="relative z-10">
             <h2 className="text-3xl md:text-5xl font-bold mb-8 leading-tight">
-              Ready to Transform Your German?
+              Ready to Start Speaking?
             </h2>
             <p className="text-xl text-zinc-300 mb-12 max-w-2xl mx-auto font-light">
-              Spots are limited to keep sessions focused and effective.
+              Book a free trial session. I check your level and tell you honestly whether the coaching is right for you.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
@@ -50,13 +51,15 @@ export default function CtaSection() {
                 href="/booking"
                 className="w-full sm:w-auto px-10 py-4 bg-[var(--c-accent-primary)] text-white font-bold rounded-xl shadow-xl hover:bg-orange-700 transition-all duration-300"
               >
-                Book your spot
+                Book your free trial session →
               </Link>
               <Link
-                href="/booking"
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-full sm:w-auto px-10 py-4 border-2 border-white/30 hover:border-white hover:bg-white hover:text-black text-white font-bold rounded-xl transition-all duration-300"
               >
-                Book 1:1 intensive
+                Questions? WhatsApp me →
               </Link>
             </div>
           </div>

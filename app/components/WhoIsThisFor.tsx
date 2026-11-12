@@ -7,10 +7,10 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 gsap.registerPlugin(ScrollTrigger);
 
 const criteria = [
-  "You're at B2 or C1 level",
-  "You understand German but struggle speaking",
-  "You want to sound more natural and confident",
-  "You're living in or preparing for Germany"
+  "You have reached B1.",
+  "You understand a lot, but speaking is still hard for you.",
+  "You live in Germany or will move here soon.",
+  "You have appointments or interviews coming up and want to feel prepared."
 ];
 
 export default function WhoIsThisFor() {

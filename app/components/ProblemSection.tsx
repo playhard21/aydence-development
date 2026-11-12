@@ -42,13 +42,7 @@ export default function ProblemSection() {
           
           <div className="space-y-6 text-xl text-[var(--c-muted)] leading-relaxed font-light">
             <p>
-              Most learners reach B2 or C1 and still struggle in real conversations.
-            </p>
-            <p>
-              They understand German — but hesitate, translate in their head, or feel unsure when speaking.
-            </p>
-            <p className="font-medium text-[var(--c-text)] border-l-4 border-[var(--c-accent-primary)] pl-6 py-2 mt-8">
-              This program focuses on what is usually missing: how to think, express, and communicate in German at a high level.
+              Many people I meet have reached B1 and still freeze when they have to speak. They translate everything in their head and avoid phone calls, appointments and interviews. I developed this coaching to close exactly that gap.
             </p>
           </div>
         </div>

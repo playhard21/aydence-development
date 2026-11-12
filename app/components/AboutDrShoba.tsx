@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Image from 'next/image';
@@ -11,6 +11,7 @@ export default function AboutDrShoba() {
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (contentRef.current && imageRef.current) {
@@ -72,9 +73,27 @@ export default function AboutDrShoba() {
               About Dr. Shoba Kapoor
             </h2>
             <div className="w-20 h-1 bg-[var(--c-accent-primary)] mb-8 rounded-full mx-auto lg:mx-0"></div>
-            <p className="text-xl md:text-2xl text-[var(--c-muted)] leading-relaxed font-light">
-              Dr. Shoba Kapoor guides researchers, professionals and students from worldwide to build thriving careers in Germany — with clarity, confidence, and a concrete plan as a career coach.
-            </p>
+            {expanded ? (
+              <div className="space-y-5 text-lg md:text-xl text-[var(--c-muted)] leading-relaxed font-light">
+                <p>
+                  I grew up in Germany, and German, Hindi and Punjabi are my native languages. I studied Biology at the University of Göttingen, started my PhD at the Max Planck Institute for Multidisciplinary Sciences in 2015, and today I am a guest scientist at the Max Planck Institute for Dynamics and Self-Organization.
+                </p>
+                <p>
+                  Göttingen is a student city, and in more than ten years of research and teaching I met many international students here, in my own work and beyond. I saw a clear pattern: those who spoke German found their way and succeeded. Those who did not struggled, above all when looking for a job. That is why I founded Aydence. Speaking German is not a nice extra. It is what you need to succeed in Germany. As a communication coach, I train how you speak in the situations that decide your success here.
+                </p>
+              </div>
+            ) : (
+              <p className="text-xl md:text-2xl text-[var(--c-muted)] leading-relaxed font-light">
+                I grew up in Germany and speak German, Hindi and Punjabi as native languages. In more than ten years of research and teaching in Göttingen, I saw that international students who speak German succeed, and those who don’t struggle to find a job. That is why I founded Aydence.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="mt-6 text-[var(--c-accent-primary)] font-semibold hover:underline"
+            >
+              {expanded ? 'Show less' : 'Read more'}
+            </button>
           </div>
 
         </div>
